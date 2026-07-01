@@ -20,21 +20,27 @@ Since the patient EEG isn't public, I validated the implementation on BCI Compet
 
 Mean accuracy came out to about 82% (GaussianNB 81.7%, LDA 81.9%, SVM 82.1%), which lines up with what the FBCSP literature reports for this dataset. More importantly, the pattern of which subjects were easy and which were hard matched the known behavior of this exact dataset: subjects 2, 4 and 6 sit well below the rest at 51 to 68%, which is a well documented property of BCI IV-2a, not something specific to my code. That match mattered more to me than the raw accuracy number, because it's evidence the spatial filtering is picking up real sensorimotor rhythm structure and not just overfitting noise.
 
-Full per subject numbers are in `results/benchmark.csv` and plotted in `results/accuracy_by_subject.png`.
+Full per subject numbers are in `results/benchmark.csv`.
+
+![Accuracy by subject](results/accuracy_by_subject.png)
 
 ## Where it actually gets interesting
 
 The offline benchmark above only proves the algorithm can classify EEG that's already been cut into neat two second windows around a cue. That's not the real problem the paper had to solve. A device that assists a stroke patient's hand has to run continuously and decide, moment to moment, whether the patient is trying to move right now, including all the time they are just sitting there doing nothing.
 
-So I built a pseudo online simulation. I trained the classifier the same way as before, then instead of feeding it pre cut trials, I slid a two second window across the raw continuous EEG at 5 Hz and had it make a decision at every step, using a confidence threshold and a small debounce rule so a single noisy window couldn't count as a trigger. For every trial I measured whether it detected the movement correctly, how long that took, and whether it falsely triggered during the two seconds of quiet rest right before the cue even appeared.
+So I built a pseudo online simulation. I trained the classifier the same way as before, then instead of feeding it pre cut trials, I slid a two second window across the raw continuous EEG, moving it forward 200ms at a time, so it makes a fresh decision five times a second. At each step it only counts as a trigger if the classifier's confidence clears 0.7 and three consecutive windows in a row agree, so a single noisy window can't fire the glove on its own. For every trial I measured whether it detected the movement correctly, how long that took, and whether it falsely triggered during the two seconds of quiet rest right before the cue even appeared.
 
 The result surprised me a bit. The plain classifier detected the correct movement 88% of the time with under half a second of latency, which sounds great. But it also falsely triggered during rest on 79% of trials. That's because a forced binary classifier has no way to output "neither," the probabilities for left hand and right hand always sum to one, so on pure rest data it just confidently picks whichever class happens to look slightly closer. The offline accuracy number never shows this because the offline evaluation never gives the model any rest data to fail on. This is a known problem in real BCI systems, usually called the idle state problem, and it only shows up once you actually simulate continuous use.
 
 To fix it, I added a second FBCSP and LDA stage trained specifically to tell rest apart from motor imagery, using the couple of seconds right before each training cue as negative examples, and put it in front of the left/right classifier as a gate. Both stages now have to agree confidently before a trigger counts.
 
+One thing worth being precise about, since it's the kind of thing that should be checked rather than assumed: the gate is trained entirely on the training session (`0train`), using pre cue windows from that session as its rest examples. Every number reported here, including the false trigger rate, is measured on the separate test session (`1test`), recorded on a different day. So the rest windows the gate learns from and the rest windows it's judged on don't overlap, there's no leakage inflating the false trigger improvement.
+
 That gate brought the false trigger rate down from 79% to about 13%, roughly a six fold drop, and it held up consistently across all nine subjects. But it wasn't free: detection rate dropped from 88% to 68%, and latency went up from about half a second to 0.78 seconds. That's a real precision and recall tradeoff, not something I tried to hide or average away. For an assistive glove I'd actually lean toward the gated version, a false clench when the patient didn't ask for one seems worse than occasionally having to try again, but I think it's more honest to show both numbers than to just report the flattering one.
 
-Full per subject comparison is in `results/online_simulation.csv` and plotted in `results/online_simulation_comparison.png`.
+Full per subject comparison is in `results/online_simulation.csv`.
+
+![Baseline vs gated pseudo online simulation](results/online_simulation_comparison.png)
 
 ## What this does and doesn't prove
 
