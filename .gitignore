@@ -1,0 +1,9 @@
+.venv/
+data/MNE-bnci-data/
+data/*.log
+data/benchmark_log.txt
+C-/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
