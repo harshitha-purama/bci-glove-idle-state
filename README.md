@@ -35,6 +35,8 @@ To fix it, I added a second FBCSP and LDA stage trained specifically to tell res
 That gate brought the false trigger rate down from 79% to about 13%, roughly a six fold drop, and it held up consistently across all nine subjects. But it wasn't free: detection rate dropped from 88% to 68%, and latency went up from about half a second to 0.78 seconds. That's a real precision and recall tradeoff, not something I tried to hide or average away. For an assistive glove I'd actually lean toward the gated version, a false clench when the patient didn't ask for one seems worse than occasionally having to try again, but I think it's more honest to show both numbers than to just report the flattering one.
 
 Full per subject comparison is in `results/online_simulation.csv` and plotted in `results/online_simulation_comparison.png`.
+<img width="1350" height="750" alt="image" src="https://github.com/user-attachments/assets/9769bfd2-a3ca-4b16-a885-04ba618691b6" />
+
 <img width="1800" height="750" alt="image" src="https://github.com/user-attachments/assets/274be1e2-a440-441c-a084-dce74644808f" />
 
 
