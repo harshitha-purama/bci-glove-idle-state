@@ -1,6 +1,6 @@
 # BCI soft glove reproduction
 
-> **Results notice.** The pseudo-online numbers below came from an earlier evaluation with three problems: latency was measured to the *start* of the deciding window (add 2.4 s for real decision time, so about 2.9 s baseline and 3.2 s gated), false triggers were scored on one pre-cue window with no debounce, and a correct trigger still counted after an earlier wrong one. The code now fixes all three. The numbers need a rerun.
+> **Results notice.** The pseudo-online numbers below came from an earlier evaluation with three problems: latency was measured to the *start* of the deciding window (add 2.4 s for real decision time, so about 2.9 s baseline and 3.2 s gated), false triggers were scored on one pre-cue window with no debounce, and a correct trigger still counted after an earlier wrong one. The code now fixes all three. The numbers need a rerun: [open the rerun notebook in Colab](https://colab.research.google.com/github/harshitha-purama/bci-glove-idle-state/blob/main/notebooks/rerun_online_simulation.ipynb).
 
 Reproducing the EEG decoding core from a stroke rehabilitation paper out of NUS, and then pushing on it a bit further to see where it actually breaks.
 
