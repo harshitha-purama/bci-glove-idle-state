@@ -95,3 +95,13 @@ def test_zero_confidence_threshold_forces_every_trial_to_false_trigger(monkeypat
 
     # threshold 0 means every window's max-probability trivially clears the bar
     assert summary.false_trigger_rate_per_trial == 1.0
+
+
+def test_debounce_needs_agreeing_consecutive_windows():
+    import numpy as np
+    from bci_glove.online_sim import _debounced_trigger
+
+    ok = np.ones(4, dtype=bool)
+    assert _debounced_trigger(np.array([0, 1, 0, 1]), ok) == (None, None)
+    assert _debounced_trigger(np.array([1, 1, 1, 0]), ok) == (2, 1)
+    assert _debounced_trigger(np.array([1, 1, 1]), np.array([True, False, True])) == (None, None)

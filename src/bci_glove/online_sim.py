@@ -20,7 +20,9 @@ from .fbcsp import FBCSP
 
 WINDOW_SEC = 2.0        # matches training epoch length (TMIN..TMAX in data.py)
 STEP_SEC = 0.2          # 5 Hz decision rate
-PRE_CUE_SEC = 2.0        # pure-rest reference window before each cue
+PRE_CUE_SEC = 3.4        # rest span before each cue: 8 windows, so the debounce can apply.
+                         # Reaches 1.4 s before the fixation cross; check it stays clear of
+                         # the previous trial for this dataset before trusting the numbers.
 POST_CUE_SEC = 6.0       # how long after the cue we allow for a detection
 CONFIDENCE_THRESHOLD = 0.7
 GATE_CONFIDENCE_THRESHOLD = 0.7
@@ -31,8 +33,9 @@ DEBOUNCE_WINDOWS = 3     # consecutive agreeing confident windows required to "t
 class TrialResult:
     label: int
     detected: bool
-    latency_sec: float | None      # time from cue onset to sustained correct trigger
-    false_trigger: bool            # any confident (wrong-context) trigger during pre-cue rest
+    latency_sec: float | None      # cue onset to the END of the window that completes the trigger
+    false_trigger: bool            # a debounced trigger fired during pre-cue rest
+    first_trigger_correct: bool    # the first debounced trigger after the cue was the right class
     n_rest_triggers: int
     n_rest_windows: int
 
@@ -44,6 +47,12 @@ class SimulationSummary:
     @property
     def detection_rate(self) -> float:
         return np.mean([t.detected for t in self.trials])
+
+    @property
+    def first_trigger_accuracy(self) -> float:
+        """Share of trials where the first trigger fired was correct. A real
+        glove acts on the first trigger, so this is the safer headline."""
+        return np.mean([t.first_trigger_correct for t in self.trials])
 
     @property
     def mean_latency_sec(self) -> float | None:
@@ -107,6 +116,21 @@ def _confident_predictions(fbcsp: FBCSP, clf, windows: np.ndarray, gate: tuple |
     return preds, confident
 
 
+def _debounced_trigger(preds: np.ndarray, confident: np.ndarray) -> tuple[int | None, int | None]:
+    """First index completing DEBOUNCE_WINDOWS consecutive confident windows
+    that agree on one class. Returns (index, class), or (None, None)."""
+    run_len, run_class = 0, None
+    for i, (pred, ok) in enumerate(zip(preds, confident)):
+        if not ok:
+            run_len, run_class = 0, None
+            continue
+        run_len = run_len + 1 if pred == run_class else 1
+        run_class = pred
+        if run_len >= DEBOUNCE_WINDOWS:
+            return i, int(pred)
+    return None, None
+
+
 def simulate_subject(
     fbcsp: FBCSP,
     clf,
@@ -146,28 +170,30 @@ def simulate_subject(
 
         n_rest_windows = rest_windows.shape[0] if rest_windows.ndim == 3 else 0
         n_rest_triggers = 0
+        false_trigger = False
         if n_rest_windows > 0:
-            _, confident = _confident_predictions(fbcsp, clf, rest_windows, gate=gate)
+            preds, confident = _confident_predictions(fbcsp, clf, rest_windows, gate=gate)
             n_rest_triggers = int(confident.sum())
+            false_trigger = _debounced_trigger(preds, confident)[0] is not None
 
-        detected, latency = False, None
+        detected, latency, first_trigger_correct = False, None, False
         if post_windows.shape[0] > 0:
             preds, confident = _confident_predictions(fbcsp, clf, post_windows, gate=gate)
-            correct_and_confident = confident & (preds == true_label)
+            first_idx, first_class = _debounced_trigger(preds, confident)
+            first_trigger_correct = first_class == true_label
 
-            run_len = 0
-            for i, ok in enumerate(correct_and_confident):
-                run_len = run_len + 1 if ok else 0
-                if run_len >= DEBOUNCE_WINDOWS:
-                    detected = True
-                    latency = float(post_times[i - DEBOUNCE_WINDOWS + 1])
-                    break
+            correct_idx, _ = _debounced_trigger(preds, confident & (preds == true_label))
+            if correct_idx is not None:
+                detected = True
+                # The decision exists only once the last window has been recorded.
+                latency = float(post_times[correct_idx]) + WINDOW_SEC
 
         summary.trials.append(TrialResult(
             label=true_label,
             detected=detected,
             latency_sec=latency,
-            false_trigger=n_rest_triggers > 0,
+            false_trigger=false_trigger,
+            first_trigger_correct=first_trigger_correct,
             n_rest_triggers=n_rest_triggers,
             n_rest_windows=n_rest_windows,
         ))

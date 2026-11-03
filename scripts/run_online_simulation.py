@@ -62,9 +62,11 @@ def run_subject(subject: int) -> dict:
         "baseline_detection_rate": baseline.detection_rate,
         "baseline_mean_latency_sec": baseline.mean_latency_sec,
         "baseline_false_trigger_rate": baseline.false_trigger_rate_per_trial,
+        "baseline_first_trigger_accuracy": baseline.first_trigger_accuracy,
         "gated_detection_rate": gated.detection_rate,
         "gated_mean_latency_sec": gated.mean_latency_sec,
         "gated_false_trigger_rate": gated.false_trigger_rate_per_trial,
+        "gated_first_trigger_accuracy": gated.first_trigger_accuracy,
     }
 
 

@@ -1,5 +1,7 @@
 # BCI soft glove reproduction
 
+> **Results notice.** The pseudo-online numbers below came from an earlier evaluation with three problems: latency was measured to the *start* of the deciding window (add 2.4 s for real decision time, so about 2.9 s baseline and 3.2 s gated), false triggers were scored on one pre-cue window with no debounce, and a correct trigger still counted after an earlier wrong one. The code now fixes all three. The numbers need a rerun.
+
 Reproducing the EEG decoding core from a stroke rehabilitation paper out of NUS, and then pushing on it a bit further to see where it actually breaks.
 
 **Paper:** Cheng, N., Phua, K.S., Lai, H.S., Tam, P.K., Tang, K.Y., Cheng, K.K., Yeow, R.C.H., Ang, K.K., Guan, C., Lim, J.H. (2020). *Brain-Computer Interface-Based Soft Robotic Glove Rehabilitation for Stroke.* IEEE Transactions on Biomedical Engineering, 67(12), 3339-3351. [https://doi.org/10.1109/TBME.2020.2984003](https://doi.org/10.1109/TBME.2020.2984003)
@@ -36,7 +38,7 @@ To fix it, I added a second FBCSP and LDA stage trained specifically to tell res
 
 One thing worth being precise about, since it's the kind of thing that should be checked rather than assumed: the gate is trained entirely on the training session (`0train`), using pre cue windows from that session as its rest examples. Every number reported here, including the false trigger rate, is measured on the separate test session (`1test`), recorded on a different day. So the rest windows the gate learns from and the rest windows it's judged on don't overlap, there's no leakage inflating the false trigger improvement.
 
-That gate brought the false trigger rate down from 79% to about 13%, roughly a six fold drop, and it held up consistently across all nine subjects. But it wasn't free: detection rate dropped from 88% to 68%, and latency went up from about half a second to 0.78 seconds. That's a real precision and recall tradeoff, not something I tried to hide or average away. For an assistive glove I'd actually lean toward the gated version, a false clench when the patient didn't ask for one seems worse than occasionally having to try again, but I think it's more honest to show both numbers than to just report the flattering one.
+That gate brought the false trigger rate down from 79% to about 13%, roughly a six fold drop, though it varied a lot by subject (2% to 43%). But it wasn't free: detection rate dropped from 88% to 68% (30% to 95% by subject), and latency went up from about half a second to 0.78 seconds. That's a real precision and recall tradeoff, not something I tried to hide or average away. For an assistive glove I'd actually lean toward the gated version, a false clench when the patient didn't ask for one seems worse than occasionally having to try again, but I think it's more honest to show both numbers than to just report the flattering one.
 
 Full per subject comparison is in `results/online_simulation.csv`.
 
